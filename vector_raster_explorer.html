@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vector or Raster?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #EEF2EC;
+    --paper: #F8FAF6;
+    --band: #E2E9DD;
+    --ink: #1E2B22;
+    --ink-soft: #51604F;
+    --gold: #C98A2B;
+    --gold-deep: #8A5F1D;
+    --blue: #2B6E8C;
+    --green: #3E7A52;
+    --rust: #B54B3A;
+    --line: #C7D0C1;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.55;
+  }
+
+  h1, h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    line-height: 1.15;
+    margin: 0 0 0.5rem;
+  }
+
+  h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+  h2 { font-size: clamp(1.3rem, 4vw, 1.7rem); }
+
+  .byline {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin: 0 0 0.75rem;
+  }
+
+  main { max-width: 720px; margin: 0 auto; }
+
+  .hero, .band {
+    padding: clamp(2rem, 6vw, 3.5rem) clamp(1.25rem, 5vw, 2.5rem);
+  }
+
+  .hero { background: var(--paper); }
+  .band { background: var(--band); }
+  .band:nth-of-type(odd) { background: var(--paper); }
+
+  .lede {
+    max-width: 46ch;
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.25rem 1.25rem 1.5rem;
+  }
+
+  .band .card { background: #fff; }
+
+  /* --- toggle / mode buttons --- */
+  .toggle-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .toggle-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 0.55rem 1.1rem;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .toggle-btn.active {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+
+  canvas#scene {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 400 / 260;
+    border-radius: 5px;
+    image-rendering: pixelated;
+    background: #DCE6D2;
+  }
+
+  .slider-row {
+    margin-top: 1rem;
+  }
+
+  .slider-row label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.4rem;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--blue);
+  }
+
+  .caption {
+    margin-top: 0.9rem;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    min-height: 1.4em;
+  }
+
+  svg#scale-demo {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 5px;
+    background: linear-gradient(180deg, #E7EEE1 0%, #D9E3D1 100%);
+  }
+
+  .score {
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    margin-bottom: 1rem;
+  }
+
+  .score span { font-weight: 600; color: var(--ink); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  @media (min-width: 560px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .feature-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1rem;
+  }
+
+  .feature-card h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.7rem;
+  }
+
+  .feature-card .buttons {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .feature-card button.answer {
+    flex: 1 1 auto;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    cursor: pointer;
+  }
+
+  .feature-card button.answer:disabled { cursor: default; opacity: 0.55; }
+
+  .feature-card.correct { border-color: var(--green); background: #F1F8F3; }
+  .feature-card.incorrect { border-color: var(--rust); background: #FBF1EF; }
+
+  .feature-card .note {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+
+  .quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  button.quiz-option {
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    cursor: pointer;
+  }
+
+  button.quiz-option:disabled { cursor: default; }
+  button.quiz-option.opt-correct { border-color: var(--green); background: #F1F8F3; }
+  button.quiz-option.opt-incorrect { border-color: var(--rust); background: #FBF1EF; }
+
+  .code-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background: var(--bg);
+    border: 1px dashed var(--gold-deep);
+    border-radius: 5px;
+    padding: 0.85rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .code-box code {
+    font-family: 'Space Grotesk', monospace;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--gold-deep);
+    letter-spacing: 0.02em;
+  }
+
+  #copy-code-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.45rem 0.9rem;
+    border-radius: 5px;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  #reset-btn {
+    margin-top: 1.5rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0.6rem 1.2rem;
+    border-radius: 5px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    cursor: pointer;
+  }
+
+  footer {
+    padding: 2rem clamp(1.25rem, 5vw, 2.5rem) 3rem;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <header class="hero">
+    <p class="byline">Bikram Parajuli, GIS 2023, Week 3: Spatial Data Models</p>
+    <h1>Vector or Raster?</h1>
+    <p class="lede">Every map on a computer has to store the world one of two ways. Try both below and see what changes.</p>
+
+    <div class="card">
+      <div class="toggle-row">
+        <button class="toggle-btn active" id="btn-vector">Vector view</button>
+        <button class="toggle-btn" id="btn-raster">Raster view</button>
+      </div>
+
+      <canvas id="scene" width="400" height="260"></canvas>
+
+      <div class="slider-row" id="raster-controls" style="display:none;">
+        <label for="pixel-slider">Pixel size</label>
+        <input type="range" id="pixel-slider" min="1" max="40" value="1">
+      </div>
+
+      <p class="caption" id="scene-caption"></p>
+    </div>
+  </header>
+
+  <section class="band">
+    <h2>Same town, different scale</h2>
+    <p class="lede">The scale you're mapping at decides whether a place is a dot or a shape.</p>
+
+    <div class="card">
+      <svg id="scale-demo" viewBox="0 0 400 240">
+        <circle id="town-dot" cx="200" cy="120" r="9" fill="#C98A2B" stroke="#8A5F1D" stroke-width="1.5"/>
+        <text id="dot-label" x="200" y="102" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#1E2B22">Norman</text>
+
+        <g id="town-poly-group" opacity="0">
+          <polygon points="140,150 165,95 230,85 275,110 265,165 190,180" fill="#C98A2B" fill-opacity="0.35" stroke="#8A5F1D" stroke-width="2"/>
+          <rect x="170" y="120" width="18" height="18" fill="#8A5F1D"/>
+          <rect x="200" y="105" width="16" height="16" fill="#8A5F1D"/>
+          <rect x="225" y="130" width="20" height="16" fill="#8A5F1D"/>
+          <rect x="190" y="145" width="16" height="14" fill="#8A5F1D"/>
+        </g>
+      </svg>
+
+      <div class="slider-row">
+        <label for="scale-slider">Map scale</label>
+        <input type="range" id="scale-slider" min="0" max="100" value="0">
+      </div>
+
+      <p class="caption" id="scale-caption"></p>
+    </div>
+  </section>
+
+  <section class="band">
+    <h2>Point, line, or polygon?</h2>
+    <p class="lede">Guess how each real-world feature would usually be stored in a vector map.</p>
+
+    <div class="score">Score: <span id="score">0</span>/6</div>
+    <div class="grid" id="game-grid"></div>
+    <button id="reset-btn">Play again</button>
+  </section>
+
+  <section class="band">
+    <h2>Quick check</h2>
+    <p class="lede">Answer all five to unlock your attendance code below.</p>
+
+    <div class="score">Correct: <span id="quiz-score">0</span>/5</div>
+    <div id="quiz-container"></div>
+  </section>
+
+  <section class="band" id="finish-section">
+    <h2>All done</h2>
+    <p class="lede" id="finish-lede">Answer all five questions above to reveal your code.</p>
+
+    <div class="card" id="code-card" style="display:none;">
+      <p style="margin:0 0 0.75rem; color:var(--ink-soft); font-size:0.95rem;">Copy this code and submit it on Canvas for today's attendance credit.</p>
+      <div class="code-box">
+        <code id="completion-code">GIS-VR-8823</code>
+        <button id="copy-code-btn">Copy code</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Week 3: Spatial Data Models, GIS 2023
+  </footer>
+
+</main>
+
+<script>
+  // ---------- Section 1: vector / raster canvas demo ----------
+  const canvas = document.getElementById('scene');
+  const ctx0 = canvas.getContext('2d');
+  const btnVector = document.getElementById('btn-vector');
+  const btnRaster = document.getElementById('btn-raster');
+  const rasterControls = document.getElementById('raster-controls');
+  const pixelSlider = document.getElementById('pixel-slider');
+  const sceneCaption = document.getElementById('scene-caption');
+
+  let mode = 'vector';
+
+  function drawScene(ctx, w, h) {
+    // land base
+    ctx.fillStyle = '#DCE6D2';
+    ctx.fillRect(0, 0, w, h);
+
+    // faint coordinate grid, to read as a map rather than a picture
+    ctx.strokeStyle = 'rgba(30,43,34,0.08)';
+    ctx.lineWidth = 1;
+    for (let x = w / 8; x < w; x += w / 8) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = h / 6; y < h; y += h / 6) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    // forest patch (a polygon)
+    ctx.fillStyle = '#8FBB92';
+    ctx.beginPath();
+    ctx.moveTo(w * 0.06, h * 0.18);
+    ctx.bezierCurveTo(w * 0.02, h * 0.35, w * 0.10, h * 0.50, w * 0.22, h * 0.46);
+    ctx.bezierCurveTo(w * 0.34, h * 0.42, w * 0.32, h * 0.20, w * 0.24, h * 0.10);
+    ctx.bezierCurveTo(w * 0.16, h * 0.02, w * 0.09, h * 0.05, w * 0.06, h * 0.18);
+    ctx.closePath();
+    ctx.fill();
+
+    // canopy texture, read from above as clustered trees
+    ctx.fillStyle = '#4F7A56';
+    [[0.10, 0.20], [0.14, 0.30], [0.19, 0.18], [0.21, 0.34], [0.12, 0.40], [0.25, 0.25], [0.17, 0.11]]
+      .forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.arc(w * dx, h * dy, Math.max(2.5, w * 0.013), 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+    // lake (a polygon)
+    ctx.fillStyle = '#2B6E8C';
+    ctx.beginPath();
+    ctx.moveTo(w * 0.55, h * 0.62);
+    ctx.bezierCurveTo(w * 0.50, h * 0.74, w * 0.55, h * 0.90, w * 0.70, h * 0.92);
+    ctx.bezierCurveTo(w * 0.86, h * 0.94, w * 0.93, h * 0.80, w * 0.88, h * 0.68);
+    ctx.bezierCurveTo(w * 0.84, h * 0.55, w * 0.67, h * 0.50, w * 0.55, h * 0.62);
+    ctx.closePath();
+    ctx.fill();
+
+    // river (a line): enters from the top map edge and flows into the lake
+    ctx.strokeStyle = '#1F5872';
+    ctx.lineWidth = Math.max(2.5, w * 0.012);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(w * 0.34, 0);
+    ctx.bezierCurveTo(w * 0.30, h * 0.18, w * 0.40, h * 0.30, w * 0.38, h * 0.45);
+    ctx.bezierCurveTo(w * 0.36, h * 0.58, w * 0.48, h * 0.60, w * 0.57, h * 0.63);
+    ctx.stroke();
+
+    // well (a point), with a small crosshair so it reads as a located marker
+    const px = w * 0.68, py = h * 0.30;
+    ctx.fillStyle = '#C98A2B';
+    ctx.beginPath();
+    ctx.arc(px, py, Math.max(4, w * 0.014), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#8A5F1D';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(px - w * 0.035, py); ctx.lineTo(px + w * 0.035, py);
+    ctx.moveTo(px, py - w * 0.035); ctx.lineTo(px, py + w * 0.035);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function renderScene() {
+    const w = canvas.width, h = canvas.height;
+
+    if (mode === 'vector') {
+      drawScene(ctx0, w, h);
+      sceneCaption.textContent = 'Vector: the lake, forest, river, and well are stored as exact coordinates. They stay sharp at any zoom level.';
+      return;
+    }
+
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    drawScene(off.getContext('2d'), w, h);
+
+    const blockSize = parseInt(pixelSlider.value, 10);
+    const smallW = Math.max(1, Math.round(w / blockSize));
+    const smallH = Math.max(1, Math.round(h / blockSize));
+
+    const temp = document.createElement('canvas');
+    temp.width = smallW; temp.height = smallH;
+    const tctx = temp.getContext('2d');
+    tctx.imageSmoothingEnabled = true;
+    tctx.drawImage(off, 0, 0, w, h, 0, 0, smallW, smallH);
+
+    ctx0.imageSmoothingEnabled = false;
+    ctx0.clearRect(0, 0, w, h);
+    ctx0.drawImage(temp, 0, 0, smallW, smallH, 0, 0, w, h);
+
+    const metersPerPixel = blockSize * 2;
+    const detail = blockSize <= 4 ? 'fine resolution, more detail'
+      : blockSize <= 15 ? 'medium resolution'
+      : 'coarse resolution, less detail';
+    sceneCaption.textContent = `Raster: every pixel here stands in for about ${metersPerPixel} m on the ground (${detail}).`;
+  }
+
+  btnVector.addEventListener('click', () => {
+    mode = 'vector';
+    btnVector.classList.add('active');
+    btnRaster.classList.remove('active');
+    rasterControls.style.display = 'none';
+    renderScene();
+  });
+
+  btnRaster.addEventListener('click', () => {
+    mode = 'raster';
+    btnRaster.classList.add('active');
+    btnVector.classList.remove('active');
+    rasterControls.style.display = 'block';
+    renderScene();
+  });
+
+  pixelSlider.addEventListener('input', renderScene);
+  renderScene();
+
+  // ---------- Section 2: scale slider demo ----------
+  const scaleSlider = document.getElementById('scale-slider');
+  const townDot = document.getElementById('town-dot');
+  const dotLabel = document.getElementById('dot-label');
+  const townPolyGroup = document.getElementById('town-poly-group');
+  const scaleCaption = document.getElementById('scale-caption');
+
+  function renderScale() {
+    const v = parseInt(scaleSlider.value, 10);
+    const dotOpacity = Math.max(0, 1 - v / 55);
+    const polyOpacity = Math.min(1, v / 55);
+
+    townDot.setAttribute('opacity', dotOpacity);
+    dotLabel.setAttribute('opacity', dotOpacity);
+    townPolyGroup.setAttribute('opacity', polyOpacity);
+
+    const denom = Math.round(1000000 - (990000 * v / 100));
+    const ratioText = '1:' + denom.toLocaleString();
+
+    if (v < 50) {
+      scaleCaption.textContent = `At scale ${ratioText}, Norman is simplified to a single point.`;
+    } else {
+      scaleCaption.textContent = `At scale ${ratioText}, Norman's boundary and buildings can be shown as a polygon.`;
+    }
+  }
+
+  scaleSlider.addEventListener('input', renderScale);
+  renderScale();
+
+  // ---------- Section 3: classify game ----------
+  const features = [
+    { name: 'A mountain peak', type: 'point', note: 'A single location, one point.' },
+    { name: 'Route 66', type: 'line', note: 'Roads stretch across space, so they are lines.' },
+    { name: 'Yellowstone National Park', type: 'polygon', note: 'It has a boundary enclosing an area.' },
+    { name: 'A single groundwater well', type: 'point', note: 'One location, one point.' },
+    { name: 'The Mississippi River', type: 'line', note: 'Rivers stretch across space, so they are lines.' },
+    { name: 'Cleveland County, Oklahoma', type: 'polygon', note: 'Counties are enclosed areas.' }
+  ];
+
+  const grid = document.getElementById('game-grid');
+  const scoreEl = document.getElementById('score');
+  let score = 0;
+
+  function buildGame() {
+    grid.innerHTML = '';
+    score = 0;
+    scoreEl.textContent = '0';
+
+    features.forEach((feature) => {
+      const card = document.createElement('div');
+      card.className = 'feature-card';
+
+      const h3 = document.createElement('h3');
+      h3.textContent = feature.name;
+      card.appendChild(h3);
+
+      const buttonsRow = document.createElement('div');
+      buttonsRow.className = 'buttons';
+
+      ['point', 'line', 'polygon'].forEach((choice) => {
+        const btn = document.createElement('button');
+        btn.className = 'answer';
+        btn.textContent = choice.charAt(0).toUpperCase() + choice.slice(1);
+        btn.addEventListener('click', () => {
+          const buttons = buttonsRow.querySelectorAll('button');
+          buttons.forEach((b) => (b.disabled = true));
+
+          const note = document.createElement('p');
+          note.className = 'note';
+
+          if (choice === feature.type) {
+            card.classList.add('correct');
+            note.textContent = '✓ ' + feature.note;
+            score += 1;
+            scoreEl.textContent = String(score);
+          } else {
+            card.classList.add('incorrect');
+            note.textContent = '✗ ' + feature.note;
+          }
+          card.appendChild(note);
+        });
+        buttonsRow.appendChild(btn);
+      });
+
+      card.appendChild(buttonsRow);
+      grid.appendChild(card);
+    });
+  }
+
+  document.getElementById('reset-btn').addEventListener('click', buildGame);
+  buildGame();
+
+  // ---------- Section 4: quick-check quiz ----------
+  const quizQuestions = [
+    {
+      prompt: "What's the main difference between vector and raster data?",
+      options: [
+        { text: 'Vector stores points, lines, and polygons with exact coordinates; raster stores a grid of pixels', correct: true },
+        { text: 'Vector is always more accurate no matter the scale' },
+        { text: 'Raster can only ever be black and white' },
+        { text: "They're the same thing, just different names" }
+      ],
+      explanation: 'Vector uses precise shapes and coordinates; raster divides space into a grid of equally sized cells.'
+    },
+    {
+      prompt: 'In the raster demo above, what happened when you increased the pixel size?',
+      options: [
+        { text: 'The image got sharper and more detailed' },
+        { text: 'The image became blockier and lost detail', correct: true },
+        { text: 'It automatically turned into vector shapes' },
+        { text: 'Nothing changed' }
+      ],
+      explanation: 'Bigger pixels each stand in for a larger area. Fine detail disappears, which means lower spatial resolution.'
+    },
+    {
+      prompt: 'Why did Norman appear as a single point when the scale slider was zoomed out?',
+      options: [
+        { text: "Computers can't draw shapes at small scales" },
+        { text: "At small (zoomed-out) scales there isn't room to show real boundaries, so it's simplified to a point", correct: true },
+        { text: 'Raster and vector always look identical' },
+        { text: "Norman doesn't have a real boundary" }
+      ],
+      explanation: 'At small map scales, an entire town is often generalized to a point; only at large, zoomed-in scales does a full polygon make sense.'
+    },
+    {
+      prompt: 'Which of these would usually be stored as a line in a vector map?',
+      options: [
+        { text: 'A single fire hydrant' },
+        { text: 'A hiking trail', correct: true },
+        { text: 'A national park' },
+        { text: 'A city block' }
+      ],
+      explanation: 'Roads, rivers, and trails stretch across space, so they are stored as lines.'
+    },
+    {
+      prompt: 'What shape naturally fits an enclosed area like a lake or a county?',
+      options: [
+        { text: 'Point' },
+        { text: 'Line' },
+        { text: 'Polygon', correct: true },
+        { text: 'Pixel grid' }
+      ],
+      explanation: 'Enclosed areas are stored as polygons.'
+    }
+  ];
+
+  const quizContainer = document.getElementById('quiz-container');
+  const quizScoreEl = document.getElementById('quiz-score');
+  const finishLede = document.getElementById('finish-lede');
+  const codeCard = document.getElementById('code-card');
+  let quizScore = 0;
+  let quizAnswered = 0;
+
+  function buildQuiz() {
+    quizContainer.innerHTML = '';
+    quizScore = 0;
+    quizAnswered = 0;
+    quizScoreEl.textContent = '0';
+    codeCard.style.display = 'none';
+    finishLede.textContent = 'Answer all five questions above to reveal your code.';
+
+    quizQuestions.forEach((q, qi) => {
+      const card = document.createElement('div');
+      card.className = 'feature-card';
+      card.style.marginBottom = '0.9rem';
+
+      const h3 = document.createElement('h3');
+      h3.textContent = `${qi + 1}. ${q.prompt}`;
+      card.appendChild(h3);
+
+      const optWrap = document.createElement('div');
+      optWrap.className = 'quiz-options';
+
+      q.options.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.textContent = opt.text;
+        btn.addEventListener('click', () => {
+          const allBtns = optWrap.querySelectorAll('button');
+          allBtns.forEach((b) => (b.disabled = true));
+
+          if (opt.correct) {
+            btn.classList.add('opt-correct');
+            quizScore += 1;
+          } else {
+            btn.classList.add('opt-incorrect');
+            const correctIndex = q.options.findIndex((o) => o.correct);
+            allBtns[correctIndex].classList.add('opt-correct');
+          }
+
+          const note = document.createElement('p');
+          note.className = 'note';
+          note.textContent = q.explanation;
+          card.appendChild(note);
+
+          quizAnswered += 1;
+          quizScoreEl.textContent = String(quizScore);
+
+          if (quizAnswered === quizQuestions.length) {
+            finishLede.textContent = `Nice work. You got ${quizScore} out of ${quizQuestions.length}. Here's your code:`;
+            codeCard.style.display = 'block';
+            codeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+        optWrap.appendChild(btn);
+      });
+
+      card.appendChild(optWrap);
+      quizContainer.appendChild(card);
+    });
+  }
+
+  buildQuiz();
+
+  document.getElementById('copy-code-btn').addEventListener('click', () => {
+    const code = document.getElementById('completion-code').textContent;
+    const btn = document.getElementById('copy-code-btn');
+    navigator.clipboard.writeText(code).then(() => {
+      const original = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    });
+  });
+</script>
+</body>
+</html>
